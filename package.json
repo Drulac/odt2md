@@ -1,0 +1,16 @@
+{
+  "name": "odt2md",
+  "version": "1.0.0",
+  "description": "convert odt file to markdown",
+  "main": "script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "html-to-md": "^0.3.5",
+    "jsdom": "^16.2.2",
+    "pandoc": "^0.2.0"
+  }
+}
