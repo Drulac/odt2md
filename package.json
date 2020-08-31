@@ -10,7 +10,7 @@
   "license": "GPL-3.0-or-later",
   "dependencies": {
     "html-to-md": "^0.3.5",
-    "jsdom": "^16.2.2",
+    "jsdom": "^16.4.0",
     "pandoc": "^0.2.0",
     "string-width": "^4.2.0"
   }
