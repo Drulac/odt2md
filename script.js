@@ -6,27 +6,14 @@ const newFilepath = './'
 const fs = require('fs')
 const util = require('util')
 const path = require('path')
-const childProcess = require('child_process')
+
+const exec = require('./exec.js')
 
 console.log(path.resolve(newFilepath))
 console.log(process.argv)
 console.log(output)
 
-const exec = (cmd) =>
-	new Promise((resolve, reject) => {
-		childProcess.exec(cmd, function (
-			error,
-			stdout,
-			stderr
-		) {
-			if (error !== null) {
-				throw error
-				reject(error)
-			} else {
-				resolve(stdout)
-			}
-		})
-	})
+//TODO compliqué : mettre ce qui est entre paranthèses en italique
 
 fs.access(
 	path.resolve(output),
@@ -69,12 +56,13 @@ fs.access(
 			const document = dom.window.document
 
 			const print = (r = false) => {
-				const decalage = 50
+				const decalage = 0
 
 				const v = dom
 					.serialize()
 					.replace(/(\n\t){2,}/g, '\n')
 					.replace(/&nbsp;/g, ' ')
+					.replace(/ /g, ' ') //stranges spaces bug sometimes in titles
 
 				if (r) return v
 				else
@@ -87,24 +75,22 @@ fs.access(
 			}
 
 			const removeAttrs = (attrs, element = '*') => {
-				Array.from(
-					document.querySelectorAll(
-						attrs
-							.map((e) => element + '[' + e + ']')
-							.join(',')
-					)
-				).forEach((el) =>
+				for (let el of document.querySelectorAll(
+					attrs
+						.map((e) => element + '[' + e + ']')
+						.join(',')
+				)) {
 					attrs.forEach((a) => el.removeAttribute(a))
-				)
+				}
 			}
 
 			const removeStyles = (
 				styles,
 				selector = 'body *:not(math)'
 			) => {
-				Array.from(
-					document.querySelectorAll(selector)
-				).forEach((el) =>
+				for (let el of document.querySelectorAll(
+					selector
+				)) {
 					styles.forEach((s) => {
 						try {
 							el.style[s] = null
@@ -114,7 +100,7 @@ fs.access(
 							console.log(error)
 						}
 					})
-				)
+				}
 			}
 
 			const deepestChild = (e) => {
@@ -161,60 +147,55 @@ fs.access(
 				'====================================================================\n'
 			)
 
-			Array.from(
-				document.querySelectorAll(
-					'meta, title, doctype, head, div[title="header"], div[title="footer"]'
-				)
-			).forEach((e) => e.parentNode.removeChild(e))
+			for (let e of document.querySelectorAll(
+				'meta, title, doctype, head, div[title="header"], div[title="footer"]'
+			)) {
+				e.parentNode.removeChild(e)
+			}
 
-			Array.from(
-				document.querySelectorAll('math')
-			).map((el) =>
-				Array.from(el.childNodes).forEach((e) =>
-					el.removeChild(e)
-				)
-			)
+			for (let math of document.querySelectorAll('math')) {
+				for (let e of math.childNodes) {
+					math.removeChild(e)
+				}
+			}
 
-			Array.from(
-				document.querySelectorAll(
-					'.Heading1, .Heading2, .Heading3, .Heading4, .Heading5, .Heading6'
-				)
-			).forEach((el) => {
+			for (let el of document.querySelectorAll(
+				'.Heading1, .Heading2, .Heading3, .Heading4, .Heading5, .Heading6'
+			)) {
 				const level = el
 					.getAttribute('class')
 					.replace('Heading', '')
 
 				const title = document.createElement('h' + level)
+
 				el.parentNode.insertAdjacentElement(
 					'afterend',
 					title
 				)
-				Array.from(el.childNodes).map((c) =>
+				for (let c of el.childNodes) {
 					title.appendChild(c)
-				)
-				Array.from(el.attributes)
-					.filter((a) => a.name !== 'class')
-					.map((a) => title.setAttribute(a.name, a.value))
+				}
+
+				for (let a of el.attributes) {
+					if (a.name !== 'class')
+						title.setAttribute(a.name, a.value)
+				}
 
 				el.insertAdjacentElement('afterend', title)
 				el.parentNode.removeChild(el)
-			})
+			}
 
 			removeAttrs(['class'])
 			removeAttrs(['xml:lang'])
 			removeAttrs(['lang', 'dir'])
 			removeAttrs(['face'], 'font')
 
-			Array.from(document.querySelectorAll('p'))
-				.map((e) => deepestChild(e))
-				.filter((e) => typeof e !== 'undefined')
-				.forEach(
-					(e) =>
-						(e.textContent = e.textContent.replace(
-							/\n/g,
-							' '
-						))
-				)
+			for (let e of document.querySelectorAll('p')) {
+				e = deepestChild(e)
+				if (typeof e !== 'undefined') {
+					e.textContent = e.textContent.replace(/\n/g, ' ')
+				}
+			}
 
 			console.log(
 				'\n===================================================================='
@@ -223,15 +204,16 @@ fs.access(
 				'====================================================================\n'
 			)
 
-			Array.from(document.querySelectorAll('p')).map((c) =>
-				removeEmpty(c)
+			Array.from(document.querySelectorAll('p')).map(
+				removeEmpty
 			)
 
-			Array.from(
-				document.querySelectorAll(
-					'p[align="left"], p[align="justify"]'
-				)
-			).forEach((el) => el.removeAttribute('align'))
+			for (let el of document.querySelectorAll(
+				'p[align="left"], p[align="justify"]'
+			)) {
+				el.removeAttribute('align')
+			}
+
 			removeStyles([
 				'line-height',
 				'margin-bottom',
@@ -242,13 +224,14 @@ fs.access(
 				'text-align',
 				'textAlign',
 			])
-			Array.from(
-				document.querySelectorAll('*[style=""]')
-			).forEach((el) => el.removeAttribute('style'))
 
-			Array.from(
-				document.querySelectorAll('p > br')
-			).forEach((el) => {
+			for (let el of document.querySelectorAll(
+				'*[style=""]'
+			)) {
+				el.removeAttribute('style')
+			}
+
+			for (let el of document.querySelectorAll('p > br')) {
 				try {
 					const p = el.parentNode
 					p.insertAdjacentElement('afterend', el)
@@ -256,15 +239,15 @@ fs.access(
 				} catch (e) {
 					console.error(e)
 				}
-			})
+			}
 
 			while (
 				Array.from(document.querySelectorAll('p > font'))
 					.length > 0
 			) {
-				Array.from(
-					document.querySelectorAll('p > font')
-				).forEach((el) => {
+				for (let el of document.querySelectorAll(
+					'p > font'
+				)) {
 					const p = el.parentNode
 					Array.from(el.attributes).map((a) =>
 						p.setAttribute(a.name, a.value)
@@ -273,7 +256,7 @@ fs.access(
 						p.appendChild(c)
 					)
 					p.removeChild(el)
-				})
+				}
 			}
 
 			console.log(
@@ -283,103 +266,94 @@ fs.access(
 				'====================================================================\n'
 			)
 
-			Array.from(document.querySelectorAll('p'))
-				.map((e) => deepestChild(e))
-				.filter((e) => typeof e !== 'undefined')
-				.forEach((el) => {
-					el.textContent = el.textContent
+			for (let e of document.querySelectorAll('p')) {
+				e = deepestChild(e)
+				if (typeof e !== 'undefined') {
+					e.textContent = e.textContent
 						.replace(/\n/g, ' ')
 						.trim()
-				})
+				}
+			}
 
-			Array.from(
-				document.querySelectorAll('br')
-			).forEach((el) => el.parentNode.removeChild(el))
+			for (let el of document.querySelectorAll('br')) {
+				el.parentNode.removeChild(el)
+			}
 
-			Array.from(document.querySelectorAll('p, u'))
-				.map((e) => deepestChild(e))
-				.filter((e) => typeof e !== 'undefined')
-				.map((el) => {
+			for (let e of document.querySelectorAll('p, u')) {
+				e = deepestChild(e)
+				if (typeof e !== 'undefined') {
 					el.textContent = el.textContent
 						.replace(/&nbsp;/g, ' ')
 						.replace(/\n/g, ' ')
 						.trim()
 
-					return el
-				})
-				.forEach((el) => {
 					if (el.textContent.trim() === '')
 						el.parentNode.remove(el)
-				})
-
-			Array.from(document.querySelectorAll('*')).forEach(
-				(el) => {
-					el.style['font-family'] = null
-					el.style['margin-left'] = null
-					el.style['margin-right'] = null
-					el.style['text-indent'] = null
-					el.style['text-decoration'] = null
-					el.removeAttribute('id')
 				}
-			)
+			}
+
+			for (let el of document.querySelectorAll('*')) {
+				el.style['font-family'] = null
+				el.style['margin-left'] = null
+				el.style['margin-right'] = null
+				el.style['text-indent'] = null
+				el.style['text-decoration'] = null
+				el.removeAttribute('id')
+			}
 
 			const sizes = Array.from(
 				document.querySelectorAll('p, span')
 			)
 				.map((el) => el.style['font-size'])
 				.filter((e) => e !== '')
-				.filter((value, index, arr) => {
-					return arr.indexOf(value) === index
-				})
+				.filter(
+					(value, index, arr) =>
+						arr.indexOf(value) === index
+				)
 				.sort((a, b) => {
 					const aa = Number.parseFloat(a.slice(0, -2))
 					const bb = Number.parseFloat(b.slice(0, -2))
 					return bb - aa
 				})
 
-			Array.from(document.querySelectorAll('p, span'))
-				.filter(
-					(el) =>
-						el.style['background-color'] === 'transparent'
-				)
-				.forEach((el) => {
+			for (let el of document.querySelectorAll('p, span')) {
+				if (
+					el.style['background-color'] === 'transparent'
+				) {
 					if (
 						el.parentNode.style['background-color'] !== ''
 					) {
-						Array.from(el.parentNode.childNodes)
-							.filter((child) => child.style === undefined)
-							.forEach((child) => {
+						for (let child of el.parentNode.childNodes) {
+							if (child.style === undefined) {
 								const newEl = document.createElement('p')
 								newEl.textContent = child.textContent
 								child.parentNode.insertBefore(newEl, child)
 
 								child.parentNode.removeChild(child)
-							})
+							}
+						}
 
-						Array.from(el.parentNode.childNodes)
-							// TODO: check because seem's wtf
-							.map((child) => {
-								if (child.style === undefined) return child
-							})
-							.filter((child) => child.style !== undefined)
-							.forEach((child) => {
-								if (
+						//take in mind the new nodes
+						for (let child of el.parentNode.childNodes) {
+							if (child.style === undefined) {
+								child.style['background-color'] =
 									child.style['background-color'] !==
 									'transparent'
-								)
-									child.style['background-color'] =
-										el.parentNode.style['background-color']
-								else child.style['background-color'] = ''
-							})
+										? el.parentNode.style[
+												'background-color'
+										  ]
+										: ''
+							}
+						}
 
 						el.parentNode.style['background-color'] = ''
 					}
 					el.style['background-color'] = ''
-				})
+				}
+			}
 
-			Array.from(document.querySelectorAll('p, span'))
-				.filter((el) => el.style['background-color'] !== '')
-				.forEach((el) => {
+			for (let el of document.querySelectorAll('p, span')) {
+				if (el.style['background-color'] !== '') {
 					const newEl = document.createElement('i')
 					el.insertAdjacentElement('afterend', newEl)
 					Array.from(el.childNodes).map((c) =>
@@ -387,80 +361,70 @@ fs.access(
 					)
 
 					el.parentNode.removeChild(el)
-				})
+				}
+			}
 
-			Array.from(
-				document.querySelectorAll('b kbd')
-			).forEach((el) => {
+			for (let el of document.querySelectorAll('b kbd')) {
 				const p = el.parentNode
 				el.parentNode.insertAdjacentElement('afterend', el)
 
 				el.parentNode.removeChild(p)
-			})
+			}
 
-			Array.from(document.querySelectorAll('b')).forEach(
-				(el) => {
-					if (el.textContent.trim() === '') {
-						el.insertAdjacentText(
-							'afterend',
-							el.textContent
-						)
-					} else {
-						const strong = document.createElement('strong')
-						el.insertAdjacentElement('afterend', strong)
-						Array.from(el.childNodes).map((c) =>
-							strong.appendChild(c)
-						)
-					}
-					el.parentNode.removeChild(el)
+			for (let el of document.querySelectorAll('b')) {
+				if (el.textContent.trim() === '') {
+					el.insertAdjacentText('afterend', el.textContent)
+				} else {
+					const strong = document.createElement('strong')
+					el.insertAdjacentElement('afterend', strong)
+					Array.from(el.childNodes).map((c) =>
+						strong.appendChild(c)
+					)
 				}
-			)
+				el.parentNode.removeChild(el)
+			}
 
-			Array.from(document.querySelectorAll('p, span'))
-				.filter(
-					(el) =>
-						(el.style['font-style'] !== '') |
-						(el.style['font-weight'] !== '')
-				)
-				.forEach((el) => {
+			for (let el of document.querySelectorAll('p, span')) {
+				if (
+					(el.style['font-style'] !== '') |
+					(el.style['font-weight'] !== '')
+				) {
 					if (
 						(el.style['font-style'] === 'bold') |
 						(el.style['font-weight'] === 'bold')
 					) {
-						const strong = document.createElement('strong')
-						el.insertAdjacentElement('afterend', strong)
-						Array.from(el.childNodes).map((c) =>
-							strong.appendChild(c)
-						)
+						const newEl = document.createElement('strong')
+						el.insertAdjacentElement('afterend', newEl)
+						for (let c of el.childNodes) {
+							newEl.appendChild(c)
+						}
 
 						el.parentNode.removeChild(el)
 					} else if (el.style['font-style'] === 'italic') {
 						const newEl = document.createElement('em')
 						el.insertAdjacentElement('afterend', newEl)
-						Array.from(el.childNodes).map((c) =>
+						for (let c of el.childNodes) {
 							newEl.appendChild(c)
-						)
+						}
 
 						el.parentNode.removeChild(el)
 					}
-				})
-			Array.from(
-				document.querySelectorAll('p, span')
-			).forEach((el) => {
+				}
+			}
+
+			for (let el of document.querySelectorAll('p, span')) {
 				el.style['font-size'] = null
 				el.style['font-style'] = null
 				el.style['font-weight'] = null
 				el.style['margin'] = null
 				el.style['color'] = null
-			})
+			}
 
-			Array.from(
-				document.querySelectorAll('*[style=""]')
-			).forEach((el) => el.removeAttribute('style'))
-
-			const rEmpty = (e) => {}
-
-			rEmpty(document)
+			for (let el of document.querySelectorAll(
+				'*[style=""]'
+			)) {
+				el.removeAttribute('style')
+			}
 
 			console.log(
 				'\n===================================================================='
@@ -469,21 +433,18 @@ fs.access(
 				'====================================================================\n'
 			)
 
-			Array.from(document.querySelectorAll('p'))
-				.map((e) => deepestChild(e))
-				.filter((e) => typeof e !== 'undefined')
-				.forEach((el) => {
-					el.textContent = el.textContent
+			for (let e of document.querySelectorAll('p')) {
+				e = deepestChild(e)
+				if (typeof e !== 'undefined') {
+					e.textContent = e.textContent
 						.replace(/\n/g, ' ')
 						.trim()
-				})
-			Array.from(
-				document.querySelectorAll('document > *')
-			).forEach((el) => removeEmpty(el))
+				}
+			}
 
-			Array.from(document.querySelectorAll('p')).map((c) =>
-				removeEmpty(c)
-			)
+			Array.from(
+				document.querySelectorAll('document > *, p')
+			).map(removeEmpty)
 
 			console.log(
 				'\n===================================================================='
@@ -491,6 +452,207 @@ fs.access(
 			console.log(
 				'====================================================================\n'
 			)
+
+			for (let el of document.querySelectorAll('kbd')) {
+				el.insertAdjacentText(
+					'afterend',
+					'$$' +
+						el.textContent
+							.replace(/(right|left)/g, '')
+							.replace(/widevec/g, 'vec')
+							.replace(/×/g, '*')
+							.replace(/[ ]*rsub[ ]*/g, '_') +
+						'$$'
+				)
+				el.parentNode.removeChild(el)
+			}
+
+			Array.from(
+				document.querySelectorAll(
+					'ol li:only-child strong:only-child, ul li:only-child strong:only-child'
+				)
+			)
+				.filter((strong) => getLiLevel(strong) === 0)
+				.forEach((strong) => {
+					/*console.log(
+						strong.outerHTML,
+						'\n',
+						strong.parentNode.parentNode.outerHTML
+					)
+					console.log('~'.repeat(30))*/
+					const p = document.createElement('p')
+					const title = document.createElement('h1')
+					p.appendChild(title)
+					title.textContent = strong.textContent
+
+					strong.parentNode.parentNode.insertAdjacentElement(
+						'afterend',
+						p
+					)
+
+					strong.parentNode.parentNode.parentNode.removeChild(
+						strong.parentNode.parentNode
+					)
+
+					/*console.log(
+						title.outerHTML,
+						'\n'
+						//title.parentNode.outerHTML
+					)
+					console.log('^'.repeat(30))
+			*/
+				})
+
+			for (let el of document.querySelectorAll(
+				'strong, i, em'
+			)) {
+				if (el.textContent.trim() === '') {
+					el.insertAdjacentText('afterend', el.textContent)
+				} else {
+					let trimedS = el.textContent.slice(
+						0,
+						el.textContent.length -
+							el.textContent.trimStart().length
+					)
+					let trimedE = el.textContent.slice(
+						el.textContent.trimEnd().length
+					)
+					let trimed = el.textContent.trim()
+
+					if (
+						/[.,]/.test(trimed.charAt(trimed.length - 1))
+					) {
+						trimedE = '.' + trimedE
+						trimed = el.textContent.trim().slice(0, -1)
+					}
+
+					switch (el.tagName.toLowerCase()) {
+						case 'strong':
+							trimed = '**' + trimed + '**'
+
+							break
+						case 'i':
+							if (trimedS === '') trimedS = ' '
+							if (trimedE === '') trimedE = ' '
+
+							trimed = '*' + trimed + '*'
+							break
+						case 'em':
+							trimed = '_' + trimed + '_'
+							break
+					}
+
+					const newEl = document.createElement('p')
+					el.insertAdjacentElement('afterend', newEl)
+					newEl.textContent = trimedS + trimed + trimedE
+				}
+				el.parentNode.removeChild(el)
+			}
+
+			for (let el of document.querySelectorAll('img')) {
+				while (
+					el.parentNode.tagName.toLowerCase() !== 'body'
+				) {
+					el.parentNode.parentNode.insertBefore(
+						el,
+						el.parentNode
+					)
+				}
+			}
+
+			for (let el of document.querySelectorAll('span')) {
+				el.insertAdjacentText('afterend', el.textContent)
+				el.parentNode.removeChild(el)
+			}
+
+			const newLineEscape =
+				'#fdsghfdsqwfxgtrge(t-è_-(erfdvgd'
+			const newLineEscapeRegex = new RegExp(
+				newLineEscape.replace(/([\(\)\[\]])/g, '\\$1'),
+				'g'
+			)
+			const espaceEscape = '#sdfghgfdsdgfbvuioler5°5°5YTHGF'
+			const espaceEscapeRegex = new RegExp(
+				espaceEscape.replace(/([\(\)\[\]])/g, '\\$1'),
+				'g'
+			)
+
+			function getLiLevel(el) {
+				let count = 0
+				let p = el.parentNode.parentNode
+
+				while (
+					typeof p !== 'undefined' &&
+					p.tagName.toLowerCase() === 'li'
+				) {
+					count++
+					p = p.parentNode.parentNode || undefined
+				}
+
+				return count
+			}
+
+			function capitalize(str) {
+				return str.charAt(0).toUpperCase() + str.slice(1)
+			}
+
+			function convertLi(el) {
+				if (typeof el.textContent === 'undefined') {
+					console.log('aaaaaaaaaaa')
+					console.log(el)
+					console.log('bbbbbbbbbbb')
+				}
+
+				if (el.textContent.trim() !== '') {
+					if (el.textContent.trim().charAt(0) !== '#') {
+						let level = getLiLevel(el)
+
+						let str =
+							newLineEscape +
+							espaceEscape.repeat(2).repeat(level) +
+							'- ' +
+							capitalize(el.textContent.trim())
+
+						if (level === 0) str = newLineEscape + str
+
+						const newEl = document.createElement('p')
+						el.insertAdjacentElement('afterend', newEl)
+						newEl.textContent = str
+					} else {
+						const newEl = document.createElement('p')
+						el.insertAdjacentElement('afterend', newEl)
+						newEl.textContent = el.textContent.trim()
+					}
+				}
+				el.parentNode.removeChild(el)
+			}
+
+			let stack = Array.from(
+				document.querySelectorAll('ol li, ul li')
+			)
+
+			while (stack.length > 0) {
+				for (let el of stack) {
+					if (
+						Array.from(el.querySelectorAll('li')).length ===
+						0
+					)
+						convertLi(el)
+				}
+
+				stack = Array.from(
+					document.querySelectorAll('ol li, ul li')
+				)
+			}
+
+			for (let el of document.querySelectorAll('ol, ul')) {
+				const newEl = document.createElement('p')
+				el.insertAdjacentElement('afterend', newEl)
+				newEl.textContent = el.textContent
+					.replace(newLineEscapeRegex, '\n')
+					.trim()
+				el.parentNode.removeChild(el)
+			}
 
 			let levelRegExp = /^[0-9a-z][\).]/i
 			Array.from(
@@ -519,241 +681,73 @@ fs.access(
 				)
 				el.parentNode.removeChild(el)
 			})
-			Array.from(document.querySelectorAll('kbd')).forEach(
-				(el) => {
-					el.insertAdjacentText(
-						'afterend',
-						'$' +
-							el.textContent
-								.replace(/(right|left)/g, '')
-								.replace(/widevec/g, 'vec')
-								.replace(/×/g, '*')
-								.replace(/[ ]*rsub[ ]*/g, '_') +
-							'$'
-					)
-					el.parentNode.removeChild(el)
-				}
-			)
-			Array.from(
-				document.querySelectorAll('strong')
-			).forEach((el) => {
-				if (el.textContent.trim() === '') {
-					el.insertAdjacentText('afterend', el.textContent)
-				} else {
-					let trimedS = el.textContent.slice(
-						0,
-						el.textContent.length -
-							el.textContent.trimStart().length
-					)
-					let trimedE = el.textContent.slice(
-						el.textContent.trimEnd().length
-					)
-					let trimed = el.textContent.trim()
-					if (
-						/[.,]/.test(trimed.charAt(trimed.length - 1))
-					) {
-						trimedE = '.' + trimedE
-						trimed = el.textContent.trim().slice(0, -1)
-					}
-					el.insertAdjacentText(
-						'afterend',
-						trimedS + '**' + trimed + '**' + trimedE
-					)
-				}
-				el.parentNode.removeChild(el)
-			})
-			Array.from(document.querySelectorAll('i')).forEach(
-				(el) => {
-					if (el.textContent.trim() === '') {
-						el.insertAdjacentText(
-							'afterend',
-							el.textContent
-						)
-					} else {
-						let trimedS = el.textContent.slice(
-							0,
-							el.textContent.length -
-								el.textContent.trimStart().length
-						)
-						let trimedE = el.textContent.slice(
-							el.textContent.trimEnd().length
-						)
-						let trimed = el.textContent.trim()
-						if (
-							/[.,]/.test(trimed.charAt(trimed.length - 1))
-						) {
-							trimedE = '.' + trimedE
-							trimed = el.textContent.trim().slice(0, -1)
-						}
-						if (trimedS === '') trimedS = ' '
-						if (trimedE === '') trimedE = ' '
-						el.insertAdjacentText(
-							'afterend',
-							trimedS + '*' + trimed + '*' + trimedE
-						)
-					}
-					el.parentNode.removeChild(el)
-				}
-			)
-			Array.from(document.querySelectorAll('em')).forEach(
-				(el) => {
-					if (el.textContent.trim() === '') {
-						el.insertAdjacentText(
-							'afterend',
-							el.textContent
-						)
-					} else {
-						let trimedS = el.textContent.slice(
-							0,
-							el.textContent.length -
-								el.textContent.trimStart().length
-						)
-						let trimedE = el.textContent.slice(
-							el.textContent.trimEnd().length
-						)
-						let trimed = el.textContent.trim()
-						if (
-							/[.,]/.test(trimed.charAt(trimed.length - 1))
-						) {
-							trimedE = '.' + trimedE
-							trimed = el.textContent.trim().slice(0, -1)
-						}
-						el.insertAdjacentText(
-							'afterend',
-							trimedS + '_' + trimed + '_' + trimedE
-						)
-					}
-					el.parentNode.removeChild(el)
-				}
-			)
 
-			Array.from(document.querySelectorAll('span')).forEach(
-				(el) => {
-					el.insertAdjacentText('afterend', el.textContent)
-					el.parentNode.removeChild(el)
-				}
-			)
+			const convertImg = (el) => {
+				const newEl = document.createElement('p')
+				el.insertAdjacentElement('afterend', newEl)
 
-			function getLiLevel(el) {
-				let count = 0
-				let p = el.parentNode.parentNode
+				const widthInPourcent = (
+					Math.round(
+						(parseInt(el.style.width.replace('px', '')) /
+							738) *
+							10
+					) * 10
+				).toString()
 
-				while (
-					typeof p !== 'undefined' &&
-					p.tagName.toLowerCase() === 'li'
-				) {
-					count++
-					p = p.parentNode.parentNode || undefined
-				}
+				el.alt = el.alt.replace(
+					/^(I|i)mage[s]?[ ]?[0-9]+$/,
+					''
+				)
 
-				return count
-			}
+				newEl.textContent =
+					'\n![' +
+					el.alt +
+					'](' +
+					el.src +
+					' =' +
+					+widthInPourcent +
+					'%)\n'
 
-			const newLineEscape =
-				'#fdsghfdsqwfxgtrge(t-è_-(erfdvgd'
-			const newLineEscapeRegex = new RegExp(
-				newLineEscape.replace(/([\(\)\[\]])/g, '\\$1'),
-				'g'
-			)
-			const espaceEscape = '#sdfghgfdsdgfbvuioler5°5°5YTHGF'
-			const espaceEscapeRegex = new RegExp(
-				espaceEscape.replace(/([\(\)\[\]])/g, '\\$1'),
-				'g'
-			)
-
-			function convertLi(el) {
-				if (typeof el.textContent === 'undefined') {
-					console.log('aaaaaaaaaaa')
-					console.log(el)
-					console.log('bbbbbbbbbbb')
-				}
-				if (el.textContent.trim() !== '') {
-					if (el.textContent.trim().charAt(0) !== '#') {
-						let level = getLiLevel(el)
-						console.log('level :' + level)
-
-						let str =
-							newLineEscape +
-							espaceEscape.repeat(2).repeat(level) +
-							'- ' +
-							el.textContent.trim()
-
-						if (level === 0) str = newLineEscape + str
-
-						el.insertAdjacentText('afterend', str)
-					} else {
-						el.insertAdjacentText(
-							'afterend',
-							el.textContent.trim()
-						)
-					}
-				}
 				el.parentNode.removeChild(el)
 			}
 
-			let stack = Array.from(
-				document.querySelectorAll('ol li, ul li')
-			)
+			if (
+				Array.from(document.querySelectorAll('img')).some(
+					(el) =>
+						el.src.split('.').pop().toLowerCase() === 'wmf'
+				)
+			) {
+				const extractImages = await require('./extractImages.js')(
+					src
+				)
 
-			while (stack.length > 0) {
-				let count = 0
+				Array.from(
+					document.querySelectorAll('img')
+				).forEach((el, imageId) => {
+					fs.unlinkSync(el.src)
+					el.src = extractImages[imageId]
+					fs.renameSync(
+						'imagesExtractions/' + el.src,
+						el.src
+					)
 
-				let children = stack.reduce(function iter(sum, el) {
-					console.log(count)
-					count++
-
-					if (
-						Array.from(el.querySelectorAll('li')).length > 0
-					) {
-						return sum
-					} else {
-						sum.push(el)
-						return sum
-					}
-				}, [])
-
-				children.forEach((el) => {
-					convertLi(el)
+					convertImg(el)
 				})
 
-				stack = Array.from(
-					document.querySelectorAll('ol li, ul li')
-				)
+				fs.rmdirSync('imagesExtractions/')
+			} else {
+				for (let el of document.querySelectorAll('img')) {
+					convertImg(el)
+				}
 			}
 
-			Array.from(
-				document.querySelectorAll('ol, ul')
-			).forEach((el) => {
-				el.insertAdjacentText(
-					'afterend',
-					el.textContent
-						.replace(newLineEscapeRegex, '\n')
-						.trim()
-				)
-				el.parentNode.removeChild(el)
-			})
+			for (let el of document.querySelectorAll('div')) {
+				const newEl = document.createElement('p')
+				el.insertAdjacentElement('afterend', newEl)
+				newEl.textContent = el.textContent
 
-			Array.from(document.querySelectorAll('img')).forEach(
-				(el) => {
-					el.insertAdjacentText(
-						'afterend',
-						'\n![' +
-							(el.alt | el.id) +
-							'](' +
-							el.src +
-							' =' +
-							parseInt(el.style.width.replace('px', '')) +
-							')\n'
-					)
-					el.parentNode.removeChild(el)
-				}
-			)
-			Array.from(document.querySelectorAll('div')).forEach(
-				(el) => {
-					el.insertAdjacentText('afterend', el.textContent)
-					el.parentNode.removeChild(el)
-				}
-			)
+				el.parentNode.removeChild(el)
+			}
 
 			const html2md = require('html-to-md')
 			const pandoc = require('pandoc')
@@ -767,12 +761,16 @@ fs.access(
 						str,
 						['markdown'],
 						function (result, err) {
+							if (err) {
+								console.log(
+									'pandoc exited with status code ' + err
+								)
+							}
 							resolve(
-								result.markdown
-									.trim()
+								result.markdown.trim() /*
 									.split('\n')
 									.map((e) => e.trim())
-									.join('\n')
+									.join('\n')*/
 							)
 						}
 					)
@@ -784,46 +782,142 @@ fs.access(
 				}
 			}
 
+			function recursiveRemoveAttr(node) {
+				if (
+					node !== undefined &&
+					node.attributes !== undefined
+				) {
+					while (node.attributes.length > 0)
+						node.removeAttribute(node.attributes[0].name)
+
+					Array.from(node.childNodes).forEach(
+						recursiveRemoveAttr
+					)
+				}
+			}
+
+			function htmlTableToMd(table) {
+				const headingRows = []
+				const columns = []
+
+				const rows = Array.from(
+					table.querySelectorAll('tr')
+				)
+
+				columns.push(
+					...Array.from(
+						rows[0].querySelectorAll('td, th')
+					).map((el) => ({ width: 0, cells: [] }))
+				)
+
+				rows.forEach((row, rowId) => {
+					//const isHeader = row.querySelector('th').length > 0
+					row
+						.querySelectorAll('th, td')
+						.forEach((cell, cellId) => {
+							const content = cell.textContent
+								.replace(/\*\*\*\*/g, '')
+								.replace(/\*\* \*\*/g, ' ')
+								.trim()
+
+							console.log(content)
+
+							columns[cellId].cells.push({
+								content,
+								isHeading:
+									cell.tagName.toLowerCase() === 'th',
+							})
+
+							if (content.length > columns[cellId].width)
+								columns[cellId].width = content.length
+						})
+				})
+
+				columns.forEach((column) => (column.width += 2)) //space before&after
+
+				const output = new Array(rows.length * 2 + 1)
+					.fill(0)
+					.map((e) => [])
+
+				columns.forEach((column) => {
+					column.cells.forEach((cell, cellId) => {
+						let cellContent =
+							' '.repeat(
+								Math.floor(
+									(column.width - cell.content.length) / 2
+								)
+							) +
+							cell.content +
+							' '.repeat(
+								Math.floor(
+									(column.width - cell.content.length) / 2
+								) +
+									((column.width - cell.content.length) % 2)
+							)
+
+						output[cellId * 2 + 1].push(cellContent)
+						output[cellId * 2 + 2].push(
+							(cell.isHeading ? '=' : '-').repeat(
+								cellContent.length
+							)
+						)
+					})
+				})
+
+				output[0] = output[1].map((str) =>
+					'-'.repeat(str.length)
+				)
+
+				return output
+					.map((line, lineId) =>
+						lineId % 2 === 0
+							? '+' + line.join('+') + '+'
+							: '|' + line.join('|') + '|'
+					)
+					.join('\n')
+			}
+
+			const simplifyTable = require('./simplifyTable.js')
+
 			await asyncForEach(
 				Array.from(document.querySelectorAll('table')),
 				async (el) => {
-					const md = (await toMd(el.outerHTML))
-						.replace(/\\*/g, '')
-						.replace(/([^\s])\|/g, '$1 |')
-						.replace(
-							/\n(\+--------------------------)*\+/g,
-							''
-						)
+					recursiveRemoveAttr(el)
 
-					el.insertAdjacentText('afterend', '\n' + md)
+					let md = (await htmlTableToMd(el)) + '\n'
+					//.replace(/\\*/g, '')
+					//.replace(/([^\s])\|/g, '$1 |')
+					//.replace(
+					//	/\n(\+--------------------------)*\+/g,
+					//	''
+					//)
+
+					const out =
+						'\n' +
+						simplifyTable(md).replace(/ /g, espaceEscape) +
+						'\n'
+
+					const newEl = document.createElement('p')
+					el.insertAdjacentElement('afterend', newEl)
+					newEl.textContent = out
+
 					el.parentNode.removeChild(el)
 				}
 			)
 
-			Array.from(document.querySelectorAll('p'))
+			const textOutput = Array.from(
+				document.querySelectorAll('body > *')
+			)
 				.filter(
 					(el) => Array.from(el.attributes).length === 0
 				)
-				.forEach((el) => {
-					el.insertAdjacentText(
-						'afterend',
-						el.textContent + '\n'
-					)
-					el.parentNode.removeChild(el)
-				})
-
-			dom
-				.serialize()
-				.replace(/&gt;/, '>')
-				.replace(/&lt;/g, '<')
-				.replace(/&nbsp;/g, ' ')
-				.replace(/\s/gm, ' ')
+				.map((el) => el.textContent)
+				.join('\n')
 
 			fs.writeFileSync(
 				newFilepath + '/' + output,
-				document
-					.querySelector('body')
-					.innerHTML.replace(/&nbsp;/g, ' ')
+				textOutput
+					.replace(/&nbsp;/g, ' ')
 					.replace(/&gt;/g, '>')
 					.replace(/&lt;/g, '<')
 					.replace(//g, '→')
